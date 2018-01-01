@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 
 *.bat
+*.txt
 
 __pycache__/
 *.py[cod]
