@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 
 *.bat
+old_views.py
 *.txt
 
 __pycache__/

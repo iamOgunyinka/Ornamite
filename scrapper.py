@@ -217,5 +217,3 @@ if __name__ == '__main__':
         for series in tv_series:
             s.append(tv_series[series].to_object())
         my_file.write(json.dumps(s, indent=2, separators=(',', ': ')))
-        
-    

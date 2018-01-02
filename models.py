@@ -20,7 +20,7 @@ class TvSeason(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, index=True, nullable=False)
     title = db.Column(db.Text, nullable=False)
-    page_link = db.Column(db.Text, nullable=False)
+    page_link = db.Column(db.String(256), nullable=False, unique=True)
     series_id = db.Column( db.Integer, db.ForeignKey( 'tv_series.id' ) )
     episodes = db.relationship('TvEpisode', backref='episode_name')
 
@@ -31,7 +31,7 @@ class TvEpisode(db.Model):
     id = db.Column(db.Integer, primary_key=True, index=True, nullable=False)
     seasons_id = db.Column( db.Integer, db.ForeignKey( 'tv_seasons.id' ) )
     title = db.Column(db.Text, nullable=False)
-    page_link = db.Column(db.Text, nullable=False)
+    page_link = db.Column(db.String(256), nullable=False, unique=True)
     download_links = db.relationship('DownloadLink', backref='download_link')
 
 
@@ -41,4 +41,4 @@ class DownloadLink(db.Model):
     id = db.Column(db.Integer, primary_key=True, index=True, nullable=False)
     episode_id = db.Column( db.Integer, db.ForeignKey( 'tv_episodes.id' ) )
     download_type = db.Column(db.Text, nullable=False)
-    link = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(256), nullable=False, unique=True)

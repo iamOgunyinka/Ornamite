@@ -4,9 +4,15 @@
 #  views.py
 
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import db, TvSeason, TvSeries, TvEpisode, DownloadLink
-import json
+import json, threading, os, redis
+from datetime import date
+
+
+cache_pass, port_number = os.environ.get('redis_pass'), int(os.environ.get('redis_port'))
+data_cache = redis.StrictRedis(password=cache_pass, port=port_number)
+
 
 ERROR, SUCCESS = (0, 1)
 main_api = Blueprint('main_api', __name__)
@@ -66,31 +72,14 @@ def get_episodes_handler():
         episodes.append({ 'name': episode.title, 'id': episode.id, 'links': download_links })
     return success_response(episodes)
 
-@main_api.route('/special')
-def special_route():
-    reader = open(os.environ.get('FILE_LOC'), 'r')
-    result = json.load(reader)
-    for tv_series in result:
-        show_title = tv_series.get('name')
-        seasons = tv_series.get('seasons')
-        tv_series = TvSeries(title=show_title)
-        for season in seasons:
-            season_name = season.get('title')
-            season_page_link = season.get('page_link')
-            episodes = season.get('episodes')
-            tv_season = TvSeason(title=season_name, page_link=season_page_link)
-            for episode in episodes:
-                episode_name = episode.get('title')
-                page_link = episode.get('page_link')
-                download_links = episode.get('dl_links')
-                tv_episode = TvEpisode(title=episode_name, page_link=page_link)
-                for dl_link in download_links:
-                    download_type = dl_link.get('type')
-                    download_link = dl_link.get('link')
-                    tv_episode.download_links.append(DownloadLink(download_type=download_type, link=download_link))
-                tv_season.episodes.append(tv_episode)
-            tv_series.seasons.append(tv_season)
-        db.session.add(tv_series)
-    db.session.commit()
-    reader.close()
-    return success_response(result)
+
+@main_api.route('/todays_updates')
+def get_todays_updates_handler():
+    today = date.today()
+    table_key = 'orn:releases-' + str(today)
+    todays_releases = data_cache.hkeys(table_key)
+    results = []
+    for release in todays_releases:
+        data = json.loads(data_cache.hget(table_key, release))
+        results.append(data)
+    return success_response(results)
