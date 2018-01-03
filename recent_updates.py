@@ -150,6 +150,8 @@ def background_data_handler():
     twenty_four_hours = an_hour * 24
     while True:
         today = date.today()
+        if visited_sites.has_key(updates_url):
+            visited_sites.pop(updates_url)
         today_releases = list_series(updates_url)
         table_key = 'orn:releases-' + str(today)
 
