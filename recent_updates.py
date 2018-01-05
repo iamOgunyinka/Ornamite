@@ -32,6 +32,8 @@ def get_data_or_none(link, callback_on_failure=None):
 
 visited_sites = {}
 
+def todays_date():
+    return date.today() # - timedelta(1)
 
 def list_series(link):
     if visited_sites.get(link) is not None:
@@ -42,7 +44,8 @@ def list_series(link):
         return None
     parsed_data = BeautifulSoup(network_response.content)
     data_list = parsed_data.findAll('div', attrs={'class': 'data main'})
-    today = date.today()
+    #~ today = date.today()
+    today = todays_date()
     today_releases = []
     for data_item in data_list:
         bold = data_item.b.string + data_item.b.nextSibling.string
@@ -144,38 +147,28 @@ def find_save_episode(todays_release_info):
                 return
 
 
-def background_data_handler():
+def run_data_handler():
     updates_url = os.environ.get('UPDATE_URL')
-    an_hour = 60 * 60
-    twenty_four_hours = an_hour * 24
-    while True:
-        today = date.today()
-        if visited_sites.has_key(updates_url):
-            visited_sites.pop(updates_url)
-        today_releases = list_series(updates_url)
-        table_key = 'orn:releases-' + str(today)
+    three_hours = 60 * 60 * 3
+    today = todays_date()
+    if visited_sites.has_key(updates_url):
+        visited_sites.pop(updates_url)
+    today_releases = list_series(updates_url)
+    table_key = 'orn:releases-' + str(today)
 
-        if today_releases is None or len(today_releases) == 0:
-            time.sleep(an_hour)
-            continue
-        # noinspection PyTypeChecker
-        for release in today_releases:
-            key = release.get('name') + '@@' + release.get('episode')
-            try:
-                find_save_episode(release)
-            except Exception as e:
-                db.session.rollback()
-                print e
-            value = json.dumps(release)
-            print value
-            if not data_cache.hexists(table_key, key):
-                data_cache.hset(table_key, key, value)
-        time.sleep(twenty_four_hours)
-# orn:releases-2018-01-01
-
-new_thread = threading.Thread(target=background_data_handler, args=[])
-new_thread.setDaemon(True)
-new_thread.start()
+    if today_releases is None or len(today_releases) == 0:
+        return
+    # noinspection PyTypeChecker
+    for release in today_releases:
+        key = release.get('name') + '@@' + release.get('episode')
+        try:
+            find_save_episode(release)
+        except Exception as e:
+            db.session.rollback()
+            print e
+        value = json.dumps(release)
+        if not data_cache.hexists(table_key, key):
+            data_cache.hset(table_key, key, value)
 
 if __name__ == '__main__':
-    app.run()
+    run_data_handler()
