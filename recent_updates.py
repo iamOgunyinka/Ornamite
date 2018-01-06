@@ -149,12 +149,14 @@ def find_save_episode(todays_release_info):
 
 def run_data_handler():
     updates_url = os.environ.get('UPDATE_URL')
-    three_hours = 60 * 60 * 3
     today = todays_date()
+    table_key = 'orn:releases-' + str(today)
+    if data_cache.hlen(table_key) > 0:
+        return
+    
     if visited_sites.has_key(updates_url):
         visited_sites.pop(updates_url)
     today_releases = list_series(updates_url)
-    table_key = 'orn:releases-' + str(today)
 
     if today_releases is None or len(today_releases) == 0:
         return

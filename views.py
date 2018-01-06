@@ -7,7 +7,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from models import db, TvSeason, TvSeries, TvEpisode, DownloadLink
 import json, threading, os, redis
-from datetime import date
+from datetime import date, timedelta
 
 
 cache_pass, port_number = os.environ.get('redis_pass'), int(os.environ.get('redis_port'))
@@ -73,13 +73,30 @@ def get_episodes_handler():
     return success_response(episodes)
 
 
-@main_api.route('/todays_updates')
-def get_todays_updates_handler():
-    today = date.today()
-    table_key = 'orn:releases-' + str(today)
+def get_updates(the_date):
+    table_key = 'orn:releases-' + str(the_date)
     todays_releases = data_cache.hkeys(table_key)
     results = []
     for release in todays_releases:
         data = json.loads(data_cache.hget(table_key, release))
         results.append(data)
     return success_response(results)
+
+
+@main_api.route('/todays_updates')
+def get_todays_updates_handler():
+    return get_updates(date.today())
+
+
+@main_api.route('/updates')
+def get_updates_handler():
+    days_ago = request.args.get('number')
+    try:
+        if days_ago is None or len(days_ago) < 0:
+            return error_response('Invalid number of days')
+        days_ago = long(days_ago)
+    except ValueError as val_error:
+        print val_error
+        return error_response('Days isn\'t a valid integer number')
+    the_date = date.today() - timedelta(days_ago)
+    return get_updates(the_date)
