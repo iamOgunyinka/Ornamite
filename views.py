@@ -73,6 +73,22 @@ def get_episodes_handler():
     return success_response(episodes)
 
 
+def date_from_string(text):
+    if text is None:
+        return text
+    split_text_string = text.split('-')
+    if len(split_text_string) < 3:
+        return None
+    try:
+        (year, month, day) = (int(split_text_string[0]), int(split_text_string[1]), int(split_text_string[2]))
+        new_date = date(year, month, day)
+        return new_date
+    except ValueError:
+        return None
+    except Exception:
+        return None
+
+
 def get_updates(the_date):
     table_key = 'orn:releases-' + str(the_date)
     todays_releases = data_cache.hkeys(table_key)
@@ -83,14 +99,15 @@ def get_updates(the_date):
     return success_response(results)
 
 
-@main_api.route('/todays_updates')
-def get_todays_updates_handler():
-    return get_updates(date.today())
-
-
 @main_api.route('/updates')
+def updates_handler():
+    the_date = date_from_string(request.args.get('date'))
+    return get_updates(date.today() if the_date is None else the_date)
+
+
+@main_api.route('/past_updates')
 def get_updates_handler():
-    days_ago = request.args.get('number')
+    days_ago = request.args.get('past')
     try:
         if days_ago is None or len(days_ago) < 0:
             return error_response('Invalid number of days')

@@ -172,5 +172,9 @@ def run_data_handler():
         if not data_cache.hexists(table_key, key):
             data_cache.hset(table_key, key, value)
 
+
 if __name__ == '__main__':
-    run_data_handler()
+    new_task = threading.Thread(target=run_data_handler, args=[])
+    new_task.start()
+    if new_task.isAlive():
+        new_task.join()
