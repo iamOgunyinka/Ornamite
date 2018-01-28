@@ -5,8 +5,9 @@
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 from BeautifulSoup import BeautifulSoup
-from datetime import date, timedelta
+from datetime import date
 from multiprocessing import Queue
 from models import TvSeries, TvEpisode, DownloadLink, TvSeason
 import threading
@@ -38,7 +39,7 @@ def get_page_data(link, callback_on_failure=None):
 
 
 def today_date():
-    return date.today() - timedelta(1)
+    return date.today()
 
 
 def list_all_series(link):
@@ -57,7 +58,19 @@ def list_all_series(link):
         tv_info = [tv.strip() for tv in bold.split('-')]
         if len(tv_info) < 4:
             continue
-        series_name, season_name, episode_name, release_date = (tv_info[0], tv_info[1], tv_info[2], tv_info[-1])
+
+        release_date = tv_info[-1]
+        episode_name = tv_info[-2]
+        season_name = tv_info[-3]
+        series_name = ''
+
+        length_series_name = len(tv_info) - 3
+        if length_series_name > 1:
+            for i in range(0, length_series_name ):
+                series_name += (tv_info[i] + ( '-' if i != length_series_name-1 else ''))
+        else:
+            series_name = tv_info[0]
+
         if release_date.startswith('['):
             release_date = release_date[1:]
         if release_date.endswith(']'):
@@ -78,7 +91,7 @@ db = SQLAlchemy()
 def initialize_app():
     application = Flask(__name__)
     application.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URL')
-    application.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+    application.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = False
     db.init_app(application)
     
     return application
@@ -139,7 +152,10 @@ def add_episode_to_season(ah_ref, **kwargs):
             season = kwargs['season']
             season.episodes.append(new_episode)
             db.session.add(season)
-        except:
+            db.session.commit()
+        except IntegrityError as ie:
+            db.session.rollback()
+            print ie
             return
 
 
@@ -156,6 +172,8 @@ def find_save_episode(todays_release_info):
             if season.title == season_title:
                 list_series_from_link(season.page_link, add_episode_to_season, season=season, episode=episode_name,
                                       data_info=todays_release_info)
+                if visited_sites.has_key(season.page_link):
+                    visited_sites.pop(season.page_link)
                 return
 
 
@@ -267,8 +285,8 @@ def find_register_new_series(series):
 
     json_io = JsonObjectIO()
     s = []
-    for series in tv_series:
-        s.append(tv_series[series].to_object())
+    for current_series in tv_series:
+        s.append(tv_series[current_series].to_object())
     json_io.write(json.dumps(s, indent=2, separators=(',', ': ')))
 
     thr = threading.Thread(target=database_updater, args=[db, json_io])
