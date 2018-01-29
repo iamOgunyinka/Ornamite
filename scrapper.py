@@ -96,6 +96,7 @@ class ShowSeason:
 class ShowTitle:
     def __init__(self, title):
         self.title = title
+        self.description = ''
         self.seasons = []
 
     def add_season(self, season):
@@ -105,7 +106,7 @@ class ShowTitle:
             raise ValueError('Invalid season')
 
     def to_object(self):
-        return {'name': self.title, 'seasons': [season.to_object() for season in self.seasons]}
+        return {'name': self.title, 'desc': self.description, 'seasons': [season.to_object() for season in self.seasons]}
 
     def __repr__(self):
         return json.dumps(self.to_object())
@@ -154,6 +155,12 @@ def list_link_series(link, post_data_callback, *callback_args, **callback_kw):
         return
     parsed_data = BeautifulSoup(network_response.content)
     data_list = parsed_data.findAll('div', attrs={'class': 'data'})
+    
+    if post_data_callback == append_season:
+        series_description = parsed_data.findAll('div', attrs={'class': 'serial_desc'})
+        if len(series_description) > 0:
+            callback_kw['desc'] = series_description[0].string.strip()
+    
     for data_item in data_list:
         ah_refs = data_item.findAll('a')
         for ah_ref in ah_refs:
@@ -169,7 +176,7 @@ def list_link_series(link, post_data_callback, *callback_args, **callback_kw):
 
 
 def store_tv_series(ah_ref):
-    tv_title = ah_ref.string.rstrip()
+    tv_title = ah_ref.string.strip()
     tv_page_link = ah_ref.attrs[0][1]
     direct_page_links.put([tv_title, tv_page_link])
 
@@ -178,7 +185,7 @@ def dl_link_extractor(ah_ref, **kwargs):
     download_link = ah_ref.attrs[0][1]
     if download_link == '#':
         return
-    download_type = ah_ref.string.rstrip()
+    download_type = ah_ref.string.strip()
     kwargs['episode'].add_download_link(DlLink(download_type, download_link))
 
 
@@ -206,7 +213,11 @@ def append_season(ah_ref, **kw):
     title = tv_series.get(tv_title)
     if title is None:
         title = ShowTitle(kw.get('title'))
-    seasons_name = ah_ref.string.rstrip()
+    
+    if title.description == '':
+        title.description = kw['desc']
+        print tv_title + '->' + title.description
+    seasons_name = ah_ref.string.strip()
     seasons_link = ah_ref.attrs[0][1]
     print 'Adding {} to {}'.format(seasons_name, tv_title)
     title.add_season(ShowSeason(seasons_name, seasons_link))
@@ -228,6 +239,7 @@ if __name__ == '__main__':
     main_page_scrapper()
     for links in visiting_links:
         list_link_series(links, store_tv_series)
+    #~ list_link_series(visiting_links[0], store_tv_series)
 
     thread_list = []
     for i in range(NUM_THREADS):

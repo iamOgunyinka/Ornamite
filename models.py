@@ -7,11 +7,13 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+
 class TvSeries(db.Model):
     __tablename__ = 'tv_series'
     
     id = db.Column(db.Integer, primary_key=True, index=True, nullable=False)
     title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     seasons = db.relationship('TvSeason', backref='series_name')
     
     

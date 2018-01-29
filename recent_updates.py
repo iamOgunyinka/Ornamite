@@ -66,8 +66,8 @@ def list_all_series(link):
 
         length_series_name = len(tv_info) - 3
         if length_series_name > 1:
-            for i in range(0, length_series_name ):
-                series_name += (tv_info[i] + ( '-' if i != length_series_name-1 else ''))
+            for i in range(0, length_series_name):
+                series_name += (tv_info[i] + ('-' if i != length_series_name-1 else ''))
         else:
             series_name = tv_info[0]
 

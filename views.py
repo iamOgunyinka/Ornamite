@@ -31,9 +31,14 @@ def success_response(message):
 
 @main_api.route('/get_series')
 def get_series_handler():
-    all_series = db.session.query(TvSeries).order_by(TvSeries.title.asc()).all()
-    tv_series = [{'id': show.id, 'title': show.title } for show in all_series]
-    return success_response(tv_series)
+    all_series = data_cache.get('orn:all_series')
+    if not all_series:
+        series_data = db.session.query(TvSeries).order_by(TvSeries.title.asc()).all()
+        tv_series = [{'id': show.id, 'title': show.title } for show in series_data]
+        all_series = json.dumps(tv_series)
+        data_cache.set('orn:all_series', all_series)
+    result = json.loads(all_series)
+    return success_response(result)
 
 
 @main_api.route('/get_seasons')
@@ -51,7 +56,25 @@ def get_seasons_handler():
         return error_response('Show does not exist')
     seasons = [ {'id': season.id, 'name': season.title } for season in show.seasons ]
     return success_response(seasons)
-    
+
+
+@main_api.route('/series_details')
+def series_details_handler():
+    show_id = request.args.get('show_id')
+    try:
+        if show_id is None or len(show_id) < 0:
+            return error_response('Invalid Show ID')
+        show_id = long(show_id)
+    except ValueError as val_error:
+        print val_error
+        return error_response('Show ID isn\'t a valid integer number')
+    show = db.session.query(TvSeries).filter_by(id=show_id).first()
+    if show is None:
+        return error_response('Show does not exist')
+    seasons = [ {'id': season.id, 'name': season.title } for season in show.seasons ]
+    result = { 'desc': show.description, 'seasons': seasons }
+    return success_response(result)
+
 
 @main_api.route('/get_episodes')
 def get_episodes_handler():
