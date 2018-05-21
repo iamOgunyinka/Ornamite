@@ -37,6 +37,9 @@ def get_series_handler():
         tv_series = [{'id': show.id, 'title': show.title } for show in series_data]
         all_series = json.dumps(tv_series)
         data_cache.set('orn:all_series', all_series)
+    else:
+        all_series = all_series.decode(); # change the data from type 'bytes' to 'str'
+    print(type(all_series))
     result = json.loads(all_series)
     return success_response(result)
 
@@ -47,9 +50,9 @@ def get_seasons_handler():
     try:
         if show_id is None or len(show_id) < 0:
             return error_response('Invalid Show ID')
-        show_id = long(show_id)
+        show_id = int(show_id)
     except ValueError as val_error:
-        print val_error
+        print(val_error)
         return error_response('Show ID isn\'t a valid integer number')
     show = db.session.query(TvSeries).filter_by(id=show_id).first()
     if show is None:
@@ -64,9 +67,9 @@ def series_details_handler():
     try:
         if show_id is None or len(show_id) < 0:
             return error_response('Invalid Show ID')
-        show_id = long(show_id)
+        show_id = int(show_id)
     except ValueError as val_error:
-        print val_error
+        print(val_error)
         return error_response('Show ID isn\'t a valid integer number')
     show = db.session.query(TvSeries).filter_by(id=show_id).first()
     if show is None:
@@ -82,9 +85,9 @@ def get_episodes_handler():
     try:
         if season_id is None or len(season_id) < 0:
             return error_response('Invalid season ID')
-        season_id = long(season_id)
+        season_id = int(season_id)
     except ValueError as val_error:
-        print val_error
+        print(val_error)
         return error_response('Season ID isn\'t a valid integer number')
     season = db.session.query(TvSeason).filter_by(id=season_id).first()
     if season is None:
@@ -134,9 +137,9 @@ def get_updates_handler():
     try:
         if days_ago is None or len(days_ago) < 0:
             return error_response('Invalid number of days')
-        days_ago = long(days_ago)
+        days_ago = int(days_ago)
     except ValueError as val_error:
-        print val_error
+        print(val_error)
         return error_response('Days isn\'t a valid integer number')
     the_date = date.today() - timedelta(days_ago)
     return get_updates(the_date)

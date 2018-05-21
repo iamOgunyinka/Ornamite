@@ -111,10 +111,13 @@ class ShowTitle:
     def __repr__(self):
         return json.dumps(self.to_object())
 
+request_accepts = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36'
+
 
 def get_data_or_return(link, callback_on_failure=None):
     try:
-        rsp = requests.get(link)
+        rsp = requests.get(link, headers={'User-Agent': user_agent, 'Accept': request_accepts})
     except Exception as e:
         print 'An exception occured: {}'.format(e)
         if callback_on_failure is not None:
@@ -134,16 +137,18 @@ def main_page_scrapper():
     if rsp is None:
         return
     soup = BeautifulSoup(rsp.content)
-    all_series_links = soup.findAll('div', attrs={'class': 'series_set'})
+    all_series_links = soup.findAll('div', attrs={'class': 'data_list'})
     if len(all_series_links) == 0:
         print 'No series found'
         exit(0)
     for series_link in all_series_links:
-        link = series_link.findAll('a')
-        for l in link:
-            for attribute in l.attrs:
-                if len(attribute) == 2 and attribute[0] == u'href':
-                    visiting_links.append(attribute[1])
+        links = series_link.findAll('div', attrs={'class': 'data'})
+        for link in links:
+            ahref = link.findAll('a')
+            for tv_link in ahref:
+                page_attributes = tv_link.attrs
+                if len(page_attributes) >= 1 and page_attributes[0][0] == 'href':
+                    direct_page_links.put([link.text, page_attributes[0][1]])
 
 
 def list_link_series(link, post_data_callback, *callback_args, **callback_kw):
@@ -173,12 +178,6 @@ def list_link_series(link, post_data_callback, *callback_args, **callback_kw):
             for page_attrib in page_attributes:
                 if len(page_attrib) >= 2 and page_attrib[0] == 'href':
                     list_link_series(page_attrib[1], post_data_callback, *callback_args, **callback_kw)
-
-
-def store_tv_series(ah_ref):
-    tv_title = ah_ref.string.strip()
-    tv_page_link = ah_ref.attrs[0][1]
-    direct_page_links.put([tv_title, tv_page_link])
 
 
 def dl_link_extractor(ah_ref, **kwargs):
@@ -237,10 +236,6 @@ def list_tv_seasons(page_links):
 
 if __name__ == '__main__':
     main_page_scrapper()
-    for links in visiting_links:
-        list_link_series(links, store_tv_series)
-    #~ list_link_series(visiting_links[0], store_tv_series)
-
     thread_list = []
     for i in range(NUM_THREADS):
         new_thread = Thread(target=list_tv_seasons, args=[direct_page_links])
@@ -254,7 +249,7 @@ if __name__ == '__main__':
     direct_page_links.close()
 
     print 'Writing to file'
-    with open('./tv_shows.txt', 'w') as my_file:
+    with open('./tv_shows.json', 'w') as my_file:
         s = []
         for series in tv_series:
             s.append(tv_series[series].to_object())
